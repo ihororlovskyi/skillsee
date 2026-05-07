@@ -1,8 +1,11 @@
 #!/usr/bin/env node
+import { createRequire } from 'node:module';
 import { defineCommand, runMain } from 'citty';
 import { auditCommand } from './commands/audit';
 import { listCommand } from './commands/list';
 import { removeCommand } from './commands/remove';
+
+const { version } = createRequire(import.meta.url)('../package.json') as { version: string };
 
 const SUBCOMMANDS = new Set(['audit', 'list', 'ls', 'remove', 'rm']);
 const HELP_FLAGS = new Set(['--help', '-h', '--version', '-v']);
@@ -15,7 +18,7 @@ if (firstArg === undefined || (!SUBCOMMANDS.has(firstArg) && !HELP_FLAGS.has(fir
 const main = defineCommand({
   meta: {
     name: 'skillio',
-    version: '0.1.1',
+    version,
     description: 'Audit and manage AI agent skills',
   },
   subCommands: {
