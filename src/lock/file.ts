@@ -7,7 +7,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { homedir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 
 export interface LockFile {
   skills: Record<string, unknown>;
@@ -29,15 +29,26 @@ export function writeLock(path: string, lock: LockFile): void {
   renameSync(tmp, path);
 }
 
+export function getBackupPath(path: string): string {
+  return join(dirname(path), '.tmp', `${basename(path)}.bak`);
+}
+
+export function backupLock(path: string): string {
+  const backupPath = getBackupPath(path);
+  mkdirSync(dirname(backupPath), { recursive: true });
+  copyFileSync(path, backupPath);
+  return backupPath;
+}
+
 export function removeSkillFromLock(
   path: string,
   skill: string,
+  { skipBackup = false }: { skipBackup?: boolean } = {},
 ): { removed: boolean; backupPath?: string } {
   if (!existsSync(path)) return { removed: false };
   const lock = readLock(path);
   if (!Object.hasOwn(lock.skills, skill)) return { removed: false };
-  const backupPath = `${path}.bak`;
-  copyFileSync(path, backupPath);
+  const backupPath = skipBackup ? undefined : backupLock(path);
   delete lock.skills[skill];
   writeLock(path, lock);
   return { removed: true, backupPath };

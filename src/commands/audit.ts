@@ -5,7 +5,7 @@ import type { CodexMode } from '../readers/codex';
 import { readCodexUsage } from '../readers/codex';
 import { parsePeriod } from '../utils/period';
 
-type Agent = 'claude' | 'codex';
+type Agent = 'claude-code' | 'codex';
 
 export interface AuditArgs {
   agent?: string;
@@ -18,14 +18,15 @@ export interface AuditArgs {
 }
 
 function parseAgents(agent: string | undefined): Agent[] {
-  if (!agent) throw new Error('--agent is required. Use --agent claude, --agent codex, or both.');
+  if (!agent)
+    throw new Error('--agent is required. Use --agent claude-code, --agent codex, or both.');
   const normalized = agent
     .split(',')
     .map((a) => a.trim())
     .map((a): Agent => {
       if (a === 'codex') return 'codex';
-      if (['claude', 'claude-code', 'claudecode'].includes(a)) return 'claude';
-      throw new Error(`Unknown agent: "${a}". Use "claude" or "codex".`);
+      if (['claude', 'claude-code', 'claudecode'].includes(a)) return 'claude-code';
+      throw new Error(`Unknown agent: "${a}". Use "claude-code" or "codex".`);
     });
   return [...new Set(normalized)];
 }
@@ -55,7 +56,7 @@ export async function runAudit(args: AuditArgs): Promise<void> {
   }> = [];
 
   for (const agent of agents) {
-    if (agent === 'claude') {
+    if (agent === 'claude-code') {
       const mode = (args.mode ?? 'attributed') as ClaudeMode;
       const result = readClaudeUsage({
         since,
@@ -112,7 +113,7 @@ export async function runAudit(args: AuditArgs): Promise<void> {
 export const auditCommand = defineCommand({
   meta: { description: 'Audit skill usage from agent session logs' },
   args: {
-    agent: { type: 'string', alias: 'a', description: 'claude, codex, or comma-separated' },
+    agent: { type: 'string', alias: 'a', description: 'claude-code, codex, or comma-separated' },
     period: { type: 'string', alias: 'p', default: '7d', description: '7d, 2w, 1m, 1y' },
     since: { type: 'string', description: 'yyyy-mm-dd, overrides --period' },
     mode: { type: 'string', description: 'attributed | activations | mentions' },
@@ -121,6 +122,11 @@ export const auditCommand = defineCommand({
     'scan-all-files': { type: 'boolean', default: false, description: 'Ignore file mtime' },
   },
   async run({ args }) {
-    await runAudit(args as AuditArgs);
+    try {
+      await runAudit(args as AuditArgs);
+    } catch (e) {
+      console.error(e instanceof Error ? e.message : String(e));
+      process.exit(1);
+    }
   },
 });

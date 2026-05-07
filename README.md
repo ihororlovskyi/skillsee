@@ -1,7 +1,7 @@
-# skillsee
+# skillio
 
-[![npm version](https://img.shields.io/npm/v/skillsee)](https://www.npmjs.com/package/skillsee)
-[![CI](https://github.com/ihororlovskyi/skillsee/actions/workflows/ci.yml/badge.svg)](https://github.com/ihororlovskyi/skillsee/actions/workflows/ci.yml)
+[![npm version](https://img.shields.io/npm/v/skillio)](https://www.npmjs.com/package/skillio)
+[![CI](https://github.com/ihororlovskyi/skillio/actions/workflows/ci.yml/badge.svg)](https://github.com/ihororlovskyi/skillio/actions/workflows/ci.yml)
 
 Audit and manage AI agent skills for Claude Code and OpenAI Codex.
 
@@ -9,26 +9,27 @@ Audit and manage AI agent skills for Claude Code and OpenAI Codex.
 
 ```sh
 # one-off (no install needed)
-npx skillsee audit --agent claude --period 7d
-pnpm dlx skillsee audit --agent codex --period 2w
+npx skillio audit --agent claude --period 7d
+pnpm dlx skillio audit --agent codex --period 2w
 
 # global install
-npm install -g skillsee
-pnpm add -g skillsee
+npm install -g skillio
+pnpm add -g skillio
 ```
 
 ## Usage
 
 ```sh
-skillsee                                     # session counts for both agents (last 7d)
-skillsee audit --agent claude --period 7d   # audit last 7 days (attributed mode)
-skillsee audit --agent codex --mode activations  # codex activations
-skillsee audit -a claude codex --period 2w  # both agents, space-separated
-skillsee audit -a claude,codex --period 2w  # both agents, comma-separated
-skillsee list                                # list skills in local skills-lock.json
-skillsee list --global                       # list from ~/.agents/.skill-lock.json
-skillsee remove brainstorming               # remove skill from lock
-skillsee remove --dry-run brainstorming     # preview removal
+skillio --agent claude --period 7d         # audit last 7 days (default subcommand)
+skillio audit --agent claude --period 7d   # audit last 7 days (attributed mode)
+skillio audit --agent codex --mode activations  # codex activations
+skillio audit -a claude codex --period 2w  # both agents, space-separated
+skillio audit -a claude,codex --period 2w  # both agents, comma-separated
+skillio list                                # list skills in local skills-lock.json
+skillio list --global                       # list from ~/.agents/.skill-lock.json
+skillio remove brainstorming               # remove skill from lock
+skillio remove brainstorming writing-plans  # remove multiple skills
+skillio remove --dry-run brainstorming     # preview removal
 ```
 
 ## What it does
@@ -38,25 +39,18 @@ skillsee remove --dry-run brainstorming     # preview removal
 
 ## Options
 
-### `skillsee` / `skillsee summary`
+### `skillio` / `skillio audit`
 
-Shows session counts for both agents. Accepts `--period` and `--since`.
+Audits skill usage from agent session logs. `audit` is the default subcommand when the first argument is an audit flag.
 
 ```sh
-skillsee           # last 7 days
-skillsee -p 2w     # last 2 weeks
+skillio --agent claude --period 7d
+skillio audit --agent codex --mode activations
 ```
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `-p, --period` | `7d` | `7d`, `2w`, `1m`, `1y` |
-| `--since` | — | `yyyy-mm-dd`, overrides `--period` |
-
-### `skillsee audit`
-
-| Flag | Default | Description |
-|------|---------|-------------|
-| `-a, --agent` | required | `claude`, `codex`, comma- or space-separated |
+| `-a, --agent` | required | `claude-code`/`claude`, `codex`, comma- or space-separated |
 | `-p, --period` | `7d` | `7d`, `2w`, `1m`, `1y` |
 | `--since` | — | `yyyy-mm-dd`, overrides `--period` |
 | `--mode` | `attributed` | `attributed` \| `activations` \| `mentions` |
@@ -70,21 +64,22 @@ skillsee -p 2w     # last 2 weeks
 - **`activations`** — explicit `Skill` tool invocations found anywhere in the entry tree (Claude) or `exec_command_end` events / `<skill>` XML (Codex). This is the default and most reliable Codex mode.
 - **`mentions`** — skill paths (`foo/SKILL.md`) or `superpowers:name` strings found in any string value. This is a broad search mode and can include examples from prompts, specs, or documentation.
 
-### `skillsee list` / `ls`
+### `skillio list` / `ls`
 
 ```sh
-skillsee list            # local skills-lock.json
-skillsee list --global   # ~/.agents/.skill-lock.json
+skillio list            # local skills-lock.json
+skillio list --global   # ~/.agents/.skill-lock.json
 ```
 
-### `skillsee remove` / `rm`
+### `skillio remove` / `rm`
 
 ```sh
-skillsee remove <skill-name>
-skillsee remove --global <skill-name>
-skillsee remove --dry-run <skill-name>
+skillio remove <skill-name>
+skillio remove <skill-one> <skill-two>
+skillio remove --global <skill-name>
+skillio remove --dry-run <skill-name>
 ```
 
 ## Requirements
 
-- Node.js ≥ 18
+- Node.js ≥ 20

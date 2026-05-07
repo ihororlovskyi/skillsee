@@ -38,6 +38,18 @@ describe('skvisor remove', () => {
     expect(stdout).toContain('not in');
   });
 
+  it('removes multiple skills at once', () => {
+    const { stdout, exitCode } = run(['remove', 'brainstorming', 'writing-plans'], TMP);
+    expect(exitCode).toBe(0);
+    expect(stdout).toContain('Removed "brainstorming"');
+    expect(stdout).toContain('Removed "writing-plans"');
+    const match = stdout.match(/\[[\s\S]*\]/);
+    const skills = JSON.parse(match![0]!) as string[];
+    expect(skills).not.toContain('brainstorming');
+    expect(skills).not.toContain('writing-plans');
+    expect(skills).toContain('frontend-design');
+  });
+
   it('--dry-run prints without modifying the file', () => {
     const { stdout, exitCode } = run(['remove', '--dry-run', 'brainstorming'], TMP);
     expect(exitCode).toBe(0);

@@ -8,7 +8,7 @@ describe('skvisor audit claude', () => {
   it('counts attributed skills from fixtures', () => {
     const { stdout, exitCode } = run([
       '--agent',
-      'claude',
+      'claude-code',
       '--mode',
       'attributed',
       '--root',
@@ -25,7 +25,7 @@ describe('skvisor audit claude', () => {
   it('counts activations mode', () => {
     const { stdout, exitCode } = run([
       '--agent',
-      'claude',
+      'claude-code',
       '--mode',
       'activations',
       '--root',
@@ -40,7 +40,7 @@ describe('skvisor audit claude', () => {
   it('outputs valid JSON with --format json', () => {
     const { stdout, exitCode } = run([
       '--agent',
-      'claude',
+      'claude-code',
       '--mode',
       'attributed',
       '--root',
@@ -54,21 +54,20 @@ describe('skvisor audit claude', () => {
       agent: string;
       skills: Array<{ skill: string; count: number }>;
     };
-    expect(parsed.agent).toBe('claude');
+    expect(parsed.agent).toBe('claude-code');
     expect(parsed.skills[0]?.skill).toBe('brainstorming');
     expect(parsed.skills[0]?.count).toBe(2);
   });
 
-  it('falls back to summary when --agent is missing', () => {
-    const { exitCode, stdout } = run(['--root', FIXTURES]);
-    expect(exitCode).toBe(0);
-    expect(stdout).toContain('sessions');
+  it('exits non-zero when --agent is missing', () => {
+    const { exitCode } = run(['--root', FIXTURES]);
+    expect(exitCode).not.toBe(0);
   });
 
   it('filters out old entries by default', () => {
     const { stdout, exitCode } = run([
       '--agent',
-      'claude',
+      'claude-code',
       '--mode',
       'attributed',
       '--root',
