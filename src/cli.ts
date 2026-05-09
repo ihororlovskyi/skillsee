@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 import { createRequire } from 'node:module';
 import { defineCommand, runMain } from 'citty';
-import { type AuditArgs, auditArgs, runAudit } from './commands/audit';
 import { costCommand } from './commands/cost';
 import { listCommand } from './commands/list';
 import { removeCommand } from './commands/remove';
+import { usageCommand } from './commands/usage';
 import { maybePrintUpdateNotice } from './utils/update-check';
 
 const { version } = createRequire(import.meta.url)('../package.json') as { version: string };
@@ -41,20 +41,7 @@ function mergeAgentArgs(argv: string[]): string[] {
 
 process.argv = mergeAgentArgs(process.argv);
 
-const SUBCOMMAND_NAMES = new Set(['list', 'ls', 'remove', 'rm', 'cost', 'co', 'audit']);
-
-const auditCommand = defineCommand({
-  meta: { description: 'Audit skill usage' },
-  args: auditArgs,
-  async run({ args }) {
-    try {
-      await runAudit(args as unknown as AuditArgs);
-    } catch (e) {
-      console.error(e instanceof Error ? e.message : String(e));
-      process.exit(1);
-    }
-  },
-});
+const SUBCOMMAND_NAMES = new Set(['list', 'ls', 'remove', 'rm', 'cost', 'co', 'usage', 'us']);
 
 const main = defineCommand({
   meta: {
@@ -74,7 +61,8 @@ const main = defineCommand({
     rm: removeCommand,
     cost: costCommand,
     co: costCommand,
-    audit: auditCommand,
+    usage: usageCommand,
+    us: usageCommand,
   },
 });
 
