@@ -3,11 +3,10 @@ Thumbs.db
 
 /node_modules
 /dist
+/package-lock.json
 
 /.agents
 /.claude
 /skills-lock.json
 /.tmp
-/package-lock.json
-
 /docs
