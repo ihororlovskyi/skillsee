@@ -3,9 +3,10 @@ import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { defineCommand } from 'citty';
 import { getLockPath, readLock, removeSkillFromLock } from '../lock/file';
-import { cyan } from '../utils/ansi';
+import { cyan, red } from '../utils/ansi';
 import { confirm } from '../utils/confirm';
 import { rmSkillDir } from '../utils/fs-rm';
+import { isTrackedByGit } from '../utils/git';
 
 interface SkillTarget {
   name: string;
@@ -37,8 +38,6 @@ function buildTarget(name: string, isGlobal: boolean, lockPath: string): SkillTa
 }
 
 function fileCount(dir: string): number {
-  // mirror rmSkillDir's countFiles, but read-only
-  // simpler: use rmSkillDir's logic indirectly by listing
   const { readdirSync, statSync } = require('node:fs') as typeof import('node:fs');
   let n = 0;
   const stack = [dir];
@@ -51,11 +50,15 @@ function fileCount(dir: string): number {
   return n;
 }
 
-function printPlan(plan: DeletePlan): void {
+function printPlan(plan: DeletePlan, lockTracked: boolean): void {
   const { target } = plan;
   console.log(`Will remove ${q(target.name)}:`);
-  if (target.inLock) console.log('  - skills-lock.json');
-  else console.log('  - skills-lock.json (not in lock)');
+  if (target.inLock) {
+    if (lockTracked) console.log('  - skills-lock.json (skipped: git-tracked; use --force-lock)');
+    else console.log('  - skills-lock.json');
+  } else {
+    console.log('  - skills-lock.json (not in lock)');
+  }
   if (target.claudeDir)
     console.log(`  - .claude/skills/${target.name}/  (${plan.claudeFileCount} files)`);
   else console.log('  - .claude/skills/  (not found)');
@@ -70,9 +73,14 @@ export const removeCommand = defineCommand({
     global: { type: 'boolean', alias: 'g', default: false, description: 'Use global scope' },
     'dry-run': { type: 'boolean', default: false, description: 'Print plan, do not delete' },
     yes: { type: 'boolean', alias: 'y', default: false, description: 'Skip confirmation prompt' },
+    'force-lock': {
+      type: 'boolean',
+      default: false,
+      description: 'Modify skills-lock.json even if it is git-tracked',
+    },
   },
   async run({ args }) {
-    const { global: isGlobal, 'dry-run': dryRun, yes } = args;
+    const { global: isGlobal, 'dry-run': dryRun, yes, 'force-lock': forceLock } = args;
 
     const subcmdIdx = process.argv.findIndex((a) => a === 'remove' || a === 'rm');
     const names = process.argv.slice(subcmdIdx + 1).filter((a) => !a.startsWith('-'));
@@ -97,9 +105,17 @@ export const removeCommand = defineCommand({
       agentsFileCount: t.agentsDir ? fileCount(t.agentsDir) : undefined,
     }));
 
+    const lockTracked = !forceLock && isTrackedByGit(lockPath);
+
     for (const p of plans) {
-      printPlan(p);
+      printPlan(p, lockTracked);
       console.log('');
+    }
+
+    if (lockTracked && plans.some((p) => p.target.inLock)) {
+      console.error(
+        red('Skipping skills-lock.json (tracked by git; pass --force-lock to override)'),
+      );
     }
 
     if (dryRun) return;
@@ -112,15 +128,16 @@ export const removeCommand = defineCommand({
       }
     }
 
-    const allowedRoots = [
-      isGlobal ? homedir() : dirname(resolve(lockPath)),
-      homedir(), // also allow ~/.claude and ~/.agents in repo-mode deletes if user pointed there
-    ];
+    const allowedRoots = [isGlobal ? homedir() : dirname(resolve(lockPath)), homedir()];
 
     for (const { target } of plans) {
       if (target.inLock) {
-        const r = removeSkillFromLock(lockPath, target.name);
-        if (r.removed) console.log(`Removed ${q(target.name)} from skills-lock.json`);
+        if (lockTracked) {
+          console.log(`Skipped skills-lock.json (git-tracked) for ${q(target.name)}`);
+        } else {
+          const r = removeSkillFromLock(lockPath, target.name);
+          if (r.removed) console.log(`Removed ${q(target.name)} from skills-lock.json`);
+        }
       } else {
         console.log(`Skipped skills-lock.json (not in lock)`);
       }

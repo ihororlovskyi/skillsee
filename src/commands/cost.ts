@@ -39,8 +39,8 @@ export const costCommand = defineCommand({
     const total = rows.reduce((acc, r) => acc + (r.frontmatterTokens ?? 0), 0);
     const { message, paint } = classify(total);
 
-    console.log(args.global ? 'Global' : 'Local');
     console.log('');
+    console.log(args.global ? 'Global' : 'Local');
 
     if (rows.length === 0) {
       console.log(`No skills in ${lockPath}`);
@@ -48,13 +48,29 @@ export const costCommand = defineCommand({
     }
 
     const nameWidth = Math.max(...rows.map((r) => r.name.length));
+    const tokenWidth = Math.max(
+      ...rows.map((r) =>
+        r.status === 'ok'
+          ? `~${r.frontmatterTokens} tok`.length
+          : r.status === 'missing'
+            ? '~? tok'.length
+            : '(no frontmatter)'.length,
+      ),
+    );
     for (const r of rows) {
-      let cell: string;
-      if (r.status === 'ok') cell = `~${r.frontmatterTokens} tok`;
-      else if (r.status === 'missing') cell = 'missing';
-      else cell = '(no frontmatter)';
-      const pad = ' '.repeat(nameWidth - r.name.length);
-      console.log(`${cyan(r.name)}${pad}  ${cell}`);
+      let tokenCell: string;
+      let suffix = '';
+      if (r.status === 'ok') {
+        tokenCell = `~${r.frontmatterTokens} tok`;
+      } else if (r.status === 'missing') {
+        tokenCell = '~? tok';
+        suffix = `  ${red('missing')}`;
+      } else {
+        tokenCell = '(no frontmatter)';
+      }
+      const namePad = ' '.repeat(nameWidth - r.name.length);
+      const tokenPad = ' '.repeat(Math.max(0, tokenWidth - tokenCell.length));
+      console.log(`${cyan(r.name)}${namePad}  ${tokenCell}${tokenPad}${suffix}`);
     }
     console.log('');
     console.log(`Total: ~${total} tok across ${rows.length} skills    ${paint(message)}`);

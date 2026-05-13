@@ -120,6 +120,41 @@ describe('skl usage claude', () => {
     expect(stdout).toMatch(/claude-code \d+ skills? \d+ times?/);
   });
 
+  it('does not render skills with count=0', () => {
+    const { stdout, exitCode } = run([
+      'usage',
+      '--agent',
+      'claude-code',
+      '--mode',
+      'attributed',
+      '--root',
+      FIXTURES,
+      '--scan-all-files',
+    ]);
+    expect(exitCode).toBe(0);
+    expect(stdout).not.toMatch(/^\s*0\s+\S+/m);
+  });
+
+  it('prints blank line before scope header and before Total line', () => {
+    const { stdout, exitCode } = run([
+      'usage',
+      '--agent',
+      'claude-code',
+      '--mode',
+      'attributed',
+      '--root',
+      FIXTURES,
+      '--scan-all-files',
+    ]);
+    expect(exitCode).toBe(0);
+    const lines = stdout.split('\n');
+    expect(lines[0]).toBe('');
+    expect(lines[1]).toMatch(/^(Local|Global)$/);
+    const totalIdx = lines.findIndex((l) => l.startsWith('Total:'));
+    expect(totalIdx).toBeGreaterThan(0);
+    expect(lines[totalIdx - 1]).toBe('');
+  });
+
   it('filters out old entries with --period 7d', () => {
     const { stdout, exitCode } = run([
       'usage',

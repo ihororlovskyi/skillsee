@@ -26,4 +26,10 @@ describe('skl ls', () => {
     expect(exitCode).toBe(0);
     expect(stdout).toContain('skills-lock.json');
   });
+
+  it('always shows .agents/skills row even when empty (0 skills)', () => {
+    const { stdout, exitCode } = run(['ls'], LOCK_DIR);
+    expect(exitCode).toBe(0);
+    expect(stdout).toMatch(/\.agents\/skills\s+:\s+0 skills?/);
+  });
 });

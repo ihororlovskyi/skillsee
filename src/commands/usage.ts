@@ -150,7 +150,7 @@ export async function runUsage(args: UsageArgs): Promise<void> {
     }
 
     const universeNames = new Set([...skillUniverse.keys(), ...counts.keys()]);
-    const rows = [...universeNames].map((name) => {
+    const allRows = [...universeNames].map((name) => {
       const rec = skillUniverse.get(name);
       return {
         name,
@@ -159,6 +159,7 @@ export async function runUsage(args: UsageArgs): Promise<void> {
         status: rec?.status ?? 'ok',
       };
     });
+    const rows = allRows.filter((r) => r.count > 0);
 
     rows.sort((a, b) => {
       const aOk = a.status === 'ok';
@@ -189,6 +190,7 @@ export async function runUsage(args: UsageArgs): Promise<void> {
 
   const periodLabel = args.since ? `since ${args.since}` : (args.period ?? 'all');
   const scopeHeader = scope.global ? 'Global' : 'Local';
+  console.log('');
   console.log(scopeHeader);
 
   const distinct = new Set<string>();
