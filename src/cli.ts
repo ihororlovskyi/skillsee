@@ -139,6 +139,14 @@ const main = defineCommand({
   args: costCommand.args,
   async run({ args }) {
     if (hasSubcommand(process.argv)) return;
+    const interactive = process.stdout.isTTY && process.stdin.isTTY;
+    if (interactive) {
+      const { runPicker } = await import('./commands/picker');
+      const status = await runPicker({
+        global: (args as { global?: boolean }).global ?? false,
+      });
+      process.exit(status);
+    }
     await costCommand.run?.({
       args,
       cmd: costCommand,

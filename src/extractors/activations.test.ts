@@ -143,4 +143,86 @@ describe('extractCodexActivations response_item/function_call', () => {
     };
     expect(extractCodexActivations(entry)).toEqual([]);
   });
+
+  it('does NOT count printf > .../SKILL.md (redirect)', () => {
+    const entry = {
+      type: 'response_item',
+      payload: {
+        type: 'function_call',
+        name: 'exec_command',
+        arguments: JSON.stringify({
+          cmd: 'printf x > /private/tmp/skl-codex-fp/skills/noise-created/SKILL.md',
+        }),
+      },
+    };
+    expect(extractCodexActivations(entry)).toEqual([]);
+  });
+
+  it('does NOT count heredoc body with cat .../SKILL.md', () => {
+    const entry = {
+      type: 'response_item',
+      payload: {
+        type: 'function_call',
+        name: 'exec_command',
+        arguments: JSON.stringify({
+          cmd: 'cat <<\'EOF\' > /tmp/x.json\n{"cmd":"cat /a/fixture/SKILL.md"}\nEOF',
+        }),
+      },
+    };
+    expect(extractCodexActivations(entry)).toEqual([]);
+  });
+
+  it('does NOT count rg searching for SKILL.md', () => {
+    const entry = {
+      type: 'response_item',
+      payload: {
+        type: 'function_call',
+        name: 'exec_command',
+        arguments: JSON.stringify({ cmd: "rg 'SKILL.md' ~/.codex/sessions" }),
+      },
+    };
+    expect(extractCodexActivations(entry)).toEqual([]);
+  });
+
+  it('counts cat across && segments', () => {
+    const entry = {
+      type: 'response_item',
+      payload: {
+        type: 'function_call',
+        name: 'exec_command',
+        arguments: JSON.stringify({
+          cmd: 'echo hi && cat /a/skill-x/SKILL.md',
+        }),
+      },
+    };
+    expect(extractCodexActivations(entry)).toEqual(['skill-x']);
+  });
+
+  it('counts head/tail/sed for SKILL.md reads', () => {
+    const entry = {
+      type: 'response_item',
+      payload: {
+        type: 'function_call',
+        name: 'exec_command',
+        arguments: JSON.stringify({
+          cmd: 'head -n 20 /a/skill-h/SKILL.md',
+        }),
+      },
+    };
+    expect(extractCodexActivations(entry)).toEqual(['skill-h']);
+  });
+
+  it('does NOT count cat /etc/passwd > .../SKILL.md (cat with redirect)', () => {
+    const entry = {
+      type: 'response_item',
+      payload: {
+        type: 'function_call',
+        name: 'exec_command',
+        arguments: JSON.stringify({
+          cmd: 'cat /etc/passwd > /a/skill-write/SKILL.md',
+        }),
+      },
+    };
+    expect(extractCodexActivations(entry)).toEqual([]);
+  });
 });

@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { extractClaudeActivations } from '../extractors/activations';
 import { extractAttributed } from '../extractors/attributed';
 import { extractClaudeMentions } from '../extractors/mentions';
+import { isUserTurnEntry } from '../utils/claude-entry';
 import { expandHome } from '../utils/expand-home';
 import { findJsonlFiles, isRecentEntry } from '../utils/jsonl';
 
@@ -49,6 +50,8 @@ export function readClaudeUsage(options: ClaudeReaderOptions): UsageResult {
             sessionAttr.set(cur, (sessionAttr.get(cur) ?? 0) + 1);
           }
           prevSkill = cur;
+        } else if (isUserTurnEntry(entry)) {
+          prevSkill = null;
         }
       }
       if (options.mode === 'activations' || options.mode === 'merged') {

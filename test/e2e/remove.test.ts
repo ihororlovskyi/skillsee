@@ -1,8 +1,17 @@
-import { cpSync, existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { execSync } from 'node:child_process';
+import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { run } from './helpers';
+
+function gitInit(cwd: string): void {
+  execSync('git init -q', { cwd });
+  execSync('git config user.email t@t', { cwd });
+  execSync('git config user.name t', { cwd });
+  execSync('git add skills-lock.json', { cwd });
+  execSync('git commit -q -m init', { cwd });
+}
 
 const LOCK_DIR = join(process.cwd(), 'test', 'fixtures', 'lock');
 
@@ -61,5 +70,30 @@ describe('skl rm', () => {
     const { stdout, exitCode } = run(['remove', '--yes', 'skill-foo'], TMP);
     expect(exitCode).toBe(0);
     expect(stdout).toContain('Removed "skill-foo"');
+  });
+
+  it('skips lock when skills-lock.json is git-tracked', () => {
+    gitInit(TMP);
+    const { stderr, exitCode } = run(['rm', '--yes', 'skill-foo'], TMP);
+    expect(exitCode).toBe(0);
+    expect(stderr).toContain('Skipping skills-lock.json (tracked by git');
+    expect(existsSync(join(TMP, '.claude/skills/skill-foo'))).toBe(false);
+    const lock = JSON.parse(readFileSync(join(TMP, 'skills-lock.json'), 'utf8'));
+    expect(Object.keys(lock.skills)).toContain('skill-foo');
+  });
+
+  it('--force-lock overrides skip and modifies tracked lock', () => {
+    gitInit(TMP);
+    const { stdout, exitCode } = run(['rm', '--yes', '--force-lock', 'skill-foo'], TMP);
+    expect(exitCode).toBe(0);
+    expect(stdout).toContain('Removed "skill-foo" from skills-lock.json');
+  });
+
+  it('--dry-run annotates the git-tracked lock skip in the plan', () => {
+    gitInit(TMP);
+    const { stdout, stderr, exitCode } = run(['rm', '--dry-run', 'skill-foo'], TMP);
+    expect(exitCode).toBe(0);
+    expect(stdout).toContain('skills-lock.json (skipped: git-tracked; use --force-lock)');
+    expect(stderr).toContain('Skipping skills-lock.json (tracked by git');
   });
 });

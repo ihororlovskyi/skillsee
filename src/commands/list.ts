@@ -1,5 +1,3 @@
-import { existsSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
 import { defineCommand } from 'citty';
 import { getLockPath } from '../lock/file';
 import { cyan } from '../utils/ansi';
@@ -53,13 +51,6 @@ function bySource(records: SkillRecord[]): {
   };
 }
 
-function agentsDirExists(isGlobal: boolean, lockPath: string): boolean {
-  if (isGlobal) {
-    return existsSync(join(process.env.HOME ?? '', '.agents', 'skills'));
-  }
-  return existsSync(join(dirname(resolve(lockPath)), '.agents', 'skills'));
-}
-
 export const listCommand = defineCommand({
   meta: { description: 'List skills per source with totals and lock-vs-disk diff' },
   args: {
@@ -70,7 +61,6 @@ export const listCommand = defineCommand({
     const map = discoverSkills({ isGlobal: args.global, cwd: process.cwd(), lockPath });
     const records = [...map.values()];
     const rows = bySource(records);
-    const showAgents = agentsDirExists(args.global, lockPath) || rows.agents.names.length > 0;
 
     const claudeNames = rows.claude.names;
     const agentsNames = rows.agents.names;
@@ -80,15 +70,11 @@ export const listCommand = defineCommand({
     const claudeNotInLock = claudeNames.filter((n) => !lockNames.includes(n));
     const agentsNotInLock = agentsNames.filter((n) => !lockNames.includes(n));
 
-    const sourceRows: SourceRow[] = [rows.claude];
-    if (showAgents) sourceRows.push(rows.agents);
-    sourceRows.push(rows.lock);
+    const sourceRows: SourceRow[] = [rows.claude, rows.agents, rows.lock];
 
     const labelWidth = Math.max(...sourceRows.map((r) => r.label.length));
-    const countCells = sourceRows.map((r) =>
-      r.names.length === 0
-        ? '(empty)'
-        : `${r.names.length} skill${r.names.length === 1 ? '' : 's'}`,
+    const countCells = sourceRows.map(
+      (r) => `${r.names.length} skill${r.names.length === 1 ? '' : 's'}`,
     );
     const countWidth = Math.max(...countCells.map((c) => c.length));
 

@@ -1,0 +1,5 @@
+{"timestamp":"2026-05-13T10:00:00Z","attributionSkill":"skill-foo","type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"first invocation"}]}}
+{"timestamp":"2026-05-13T10:00:01Z","attributionSkill":"skill-foo","type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"still in first"}]}}
+{"timestamp":"2026-05-13T10:00:02Z","type":"user","message":{"role":"user","content":[{"type":"text","text":"run brainstorming again please"}]}}
+{"timestamp":"2026-05-13T10:00:03Z","attributionSkill":"skill-foo","type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"second invocation start"}]}}
+{"timestamp":"2026-05-13T10:00:04Z","attributionSkill":"skill-foo","type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"second invocation more"}]}}

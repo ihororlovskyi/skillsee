@@ -1,3 +1,4 @@
+import { extractSkillReadsFromCmd } from '../utils/codex-cmd';
 import { walk } from '../utils/walk';
 
 export function extractClaudeActivations(entry: unknown): string[] {
@@ -63,11 +64,7 @@ export function extractCodexActivations(entry: unknown): string[] {
     }
     const cmd = (parsed as Record<string, unknown> | null)?.cmd;
     if (typeof cmd !== 'string') return [];
-    const paths = new Set<string>();
-    for (const m of cmd.matchAll(/(?:^|['"\s])([^'"\s]+\/SKILL\.md)(?=$|['"\s])/g)) {
-      if (m[1]) paths.add(m[1]);
-    }
-    return [...paths].map(skillNameFromPath).filter((s): s is string => s !== null);
+    return extractSkillReadsFromCmd(cmd);
   }
 
   return [];

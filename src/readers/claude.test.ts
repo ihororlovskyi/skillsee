@@ -28,6 +28,16 @@ describe('readClaudeUsage attributed mode (rising-edge)', () => {
     expect(counts.get('skill-foo')).toBe(1);
   });
 
+  it('counts re-invocation across a real user turn as 2', () => {
+    const { counts } = readClaudeUsage({
+      since: new Date(0),
+      mode: 'attributed',
+      root: join(FIXTURES, 'same-skill-re-invocation-dir'),
+      scanAllFiles: true,
+    });
+    expect(counts.get('skill-foo')).toBe(2);
+  });
+
   it('counts two skills interleaved (foo,foo,bar,bar,foo) as foo=2 bar=1', () => {
     const { counts } = readClaudeUsage({
       since: new Date(0),
