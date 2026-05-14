@@ -1,5 +1,51 @@
 # Changelog
 
+## 0.1.11 (2026-05-14)
+
+### Breaking
+
+- **`skl rm` no longer touches `skills-lock.json` by default.** Pass `--force-lock` to remove
+  the lock entry. The previous "skip if git-tracked, override with `--force-lock`" logic is
+  removed entirely. Scripts that relied on default lock removal need `--force-lock` added.
+- **`--period` syntax cleanup.** `s/m/h/d/w` only. Notable: **`1m` now means 1 minute, not
+  30 days.** Longhand `30sec`, `5min` and units `m` (month) / `y` (year) are rejected.
+  Migration: `5min`→`5m`, `1m` (month)→`30d`, `1y`→`365d` or `52w`.
+
+### Added
+
+- **`skl rm --all`.** Wipes every skill in scope (disk only). Combine with `--force-lock`
+  to also clear lock entries. Mutually exclusive with positional names.
+- **Picker `remove` option.** Bare `skl` in TTY now shows `remove` in the main menu;
+  selecting it opens a secondary picker listing every skill in scope. Orphans-on-disk
+  (present on disk, missing from `skills-lock.json`) are labeled with a red `(orphan)`
+  suffix to distinguish them from `cost`'s `missing` (in-lock, no `SKILL.md`).
+- **Instant `y/N` confirm.** `skl rm` in a TTY resolves on a single keystroke — no Enter
+  required. Pipes and CI still use the line-based readline fallback unchanged.
+
+### Changed
+
+- **`skl ls` redesign.** Row order is now `.agents/skills` → `.claude/skills` →
+  `skills-lock.json`. Disk names are painted green for real directories and yellow for
+  symlinks (`lstatSync` check). The `skills-lock.json` row shows only orphans-in-lock
+  (entries with no disk presence in either source); an empty orphan set renders
+  `All skills onboard!` in green.
+- **`skl usage` spacing.** The blank line that used to appear before each agent header
+  inside a scope is gone. Blank lines BEFORE the scope header (`Local`/`Global`) and
+  BEFORE `Total:` are unchanged.
+
+### Removed
+
+- `src/utils/git.ts` (`isTrackedByGit`) — no longer used after the `rm` rewrite.
+
+### History
+
+The repository history of `.gitignore` is rewritten via `git filter-repo --blob-callback`
+to drop seven legacy patterns from every historical revision. Existing clones must
+`git fetch --all --tags --force && git reset --hard origin/main`. Provenance attestations
+for v0.1.0–v0.1.10 reference pre-rewrite SHAs that no longer exist (Sigstore signatures
+remain valid; repo-SHA chain is broken for those versions). v0.1.11 establishes a fresh
+chain.
+
 ## 0.1.10 (2026-05-13)
 
 ### Fixes

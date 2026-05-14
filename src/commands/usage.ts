@@ -63,7 +63,7 @@ export const usageArgs = {
     type: 'string',
     alias: 'p',
     default: 'all',
-    description: '30sec, 5min, 12h, 7d, 2w, 1m, 1y, all',
+    description: '60s, 30m, 24h, 30d, 2w, all',
   },
   since: { type: 'string', description: 'yyyy-mm-dd, overrides --period' },
   mode: {
@@ -198,7 +198,6 @@ export async function runUsage(args: UsageArgs): Promise<void> {
 
   for (const { agent, rows } of results) {
     const activations = rows.reduce((acc, r) => acc + r.count, 0);
-    console.log('');
     console.log(
       `${agent} ${rows.length} skill${rows.length === 1 ? '' : 's'} ${activations} time${activations === 1 ? '' : 's'} by ${periodLabel}`,
     );

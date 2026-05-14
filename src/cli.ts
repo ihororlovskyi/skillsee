@@ -77,7 +77,7 @@ function printRootHelp(): void {
     '  -h, --help       Show this help and exit',
     '  -v, --version    Show version and exit',
     '  -g, --global     Use global scope (default: false)',
-    '  -p, --period     Period for `usage`: 30sec, 5min, 12h, 7d, 2w, 1m, 1y, all (default: all)',
+    '  -p, --period     Period for `usage`: 60s, 30m, 24h, 30d, 2w, all (default: all)',
     '  -a, --agent      Agent for `usage`: claude-code, codex (default: both)',
     '',
     'COMMANDS',
