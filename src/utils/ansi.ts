@@ -6,6 +6,7 @@ export function setColorEnabled(value: boolean): void {
 
 export function detectColorSupport(): boolean {
   if (process.env.NO_COLOR) return false;
+  if (process.env.FORCE_COLOR) return true;
   return Boolean(process.stdout.isTTY);
 }
 

@@ -7,17 +7,22 @@ const HOUR = 60 * MIN;
 const DAY = 24 * HOUR;
 
 describe('parsePeriod', () => {
-  it('parses seconds', () => expect(parsePeriod('30sec')).toBe(30 * SEC));
-  it('parses minutes', () => expect(parsePeriod('5min')).toBe(5 * MIN));
-  it('parses hours', () => expect(parsePeriod('12h')).toBe(12 * HOUR));
-  it('parses days', () => expect(parsePeriod('7d')).toBe(7 * DAY));
+  it('parses seconds (s)', () => expect(parsePeriod('5s')).toBe(5 * SEC));
+  it('parses 60s', () => expect(parsePeriod('60s')).toBe(60 * SEC));
+  it('parses minutes (m = minute, not month)', () => expect(parsePeriod('30m')).toBe(30 * MIN));
+  it('1m equals MINUTE_MS, not 30 days', () => expect(parsePeriod('1m')).toBe(MIN));
+  it('parses hours', () => expect(parsePeriod('24h')).toBe(24 * HOUR));
+  it('parses days', () => expect(parsePeriod('30d')).toBe(30 * DAY));
   it('parses weeks', () => expect(parsePeriod('2w')).toBe(14 * DAY));
-  it('parses months', () => expect(parsePeriod('1m')).toBe(30 * DAY));
-  it('parses years', () => expect(parsePeriod('1y')).toBe(365 * DAY));
   it('parses "all" as infinity', () => expect(parsePeriod('all')).toBe(Number.POSITIVE_INFINITY));
   it('throws on invalid format', () => expect(() => parsePeriod('foo')).toThrow('Invalid period'));
   it('throws on unknown unit', () => expect(() => parsePeriod('5x')).toThrow('Invalid period'));
-  it('throws on bare s', () => expect(() => parsePeriod('5s')).toThrow('Invalid period'));
+  it('throws on 30sec (old format)', () =>
+    expect(() => parsePeriod('30sec')).toThrow('Invalid period'));
+  it('throws on 5min (old format)', () =>
+    expect(() => parsePeriod('5min')).toThrow('Invalid period'));
+  it('throws on 1y (removed unit)', () =>
+    expect(() => parsePeriod('1y')).toThrow('Invalid period'));
 });
 
 describe('periodToDate', () => {

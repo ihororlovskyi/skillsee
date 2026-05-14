@@ -3,10 +3,10 @@ import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { defineCommand } from 'citty';
 import { getLockPath, readLock, removeSkillFromLock } from '../lock/file';
-import { cyan, red } from '../utils/ansi';
+import { cyan } from '../utils/ansi';
 import { confirm } from '../utils/confirm';
+import { discoverSkills } from '../utils/discover-skills';
 import { rmSkillDir } from '../utils/fs-rm';
-import { isTrackedByGit } from '../utils/git';
 
 interface SkillTarget {
   name: string;
@@ -37,6 +37,11 @@ function buildTarget(name: string, isGlobal: boolean, lockPath: string): SkillTa
   return { name, inLock, claudeDir, agentsDir };
 }
 
+function collectAllTargets(isGlobal: boolean, lockPath: string): SkillTarget[] {
+  const map = discoverSkills({ isGlobal, cwd: process.cwd(), lockPath });
+  return [...map.keys()].sort().map((name) => buildTarget(name, isGlobal, lockPath));
+}
+
 function fileCount(dir: string): number {
   const { readdirSync, statSync } = require('node:fs') as typeof import('node:fs');
   let n = 0;
@@ -50,12 +55,12 @@ function fileCount(dir: string): number {
   return n;
 }
 
-function printPlan(plan: DeletePlan, lockTracked: boolean): void {
+function printPlan(plan: DeletePlan, modifyLock: boolean): void {
   const { target } = plan;
   console.log(`Will remove ${q(target.name)}:`);
   if (target.inLock) {
-    if (lockTracked) console.log('  - skills-lock.json (skipped: git-tracked; use --force-lock)');
-    else console.log('  - skills-lock.json');
+    if (modifyLock) console.log('  - skills-lock.json');
+    else console.log('  - skills-lock.json (kept; use --force-lock to remove lock entry)');
   } else {
     console.log('  - skills-lock.json (not in lock)');
   }
@@ -68,30 +73,46 @@ function printPlan(plan: DeletePlan, lockTracked: boolean): void {
 }
 
 export const removeCommand = defineCommand({
-  meta: { description: 'Remove one or more skills from lock and delete their on-disk directories' },
+  meta: {
+    description: 'Remove one or more skills from on-disk dirs (lock preserved unless --force-lock)',
+  },
   args: {
     global: { type: 'boolean', alias: 'g', default: false, description: 'Use global scope' },
     'dry-run': { type: 'boolean', default: false, description: 'Print plan, do not delete' },
     yes: { type: 'boolean', alias: 'y', default: false, description: 'Skip confirmation prompt' },
+    all: { type: 'boolean', default: false, description: 'Remove every skill in scope' },
     'force-lock': {
       type: 'boolean',
       default: false,
-      description: 'Modify skills-lock.json even if it is git-tracked',
+      description: 'Also remove entry from skills-lock.json (default is to keep lock untouched)',
     },
   },
   async run({ args }) {
-    const { global: isGlobal, 'dry-run': dryRun, yes, 'force-lock': forceLock } = args;
+    const { global: isGlobal, 'dry-run': dryRun, yes, all, 'force-lock': modifyLock } = args;
 
     const subcmdIdx = process.argv.findIndex((a) => a === 'remove' || a === 'rm');
     const names = process.argv.slice(subcmdIdx + 1).filter((a) => !a.startsWith('-'));
 
-    if (names.length === 0) {
+    if (all && names.length > 0) {
+      console.error('--all is mutually exclusive with positional skill names');
+      process.exit(1);
+    }
+
+    if (!all && names.length === 0) {
       console.error('No skill names provided');
       process.exit(1);
     }
 
     const lockPath = getLockPath(isGlobal);
-    const targets = names.map((n) => buildTarget(n, isGlobal, lockPath));
+
+    const targets: SkillTarget[] = all
+      ? collectAllTargets(isGlobal, lockPath)
+      : names.map((n) => buildTarget(n, isGlobal, lockPath));
+
+    if (all && targets.length === 0) {
+      console.log('No skills to remove in scope.');
+      return;
+    }
 
     const orphan = targets.filter((t) => !t.inLock && !t.claudeDir && !t.agentsDir);
     if (orphan.length) {
@@ -105,23 +126,16 @@ export const removeCommand = defineCommand({
       agentsFileCount: t.agentsDir ? fileCount(t.agentsDir) : undefined,
     }));
 
-    const lockTracked = !forceLock && isTrackedByGit(lockPath);
-
     for (const p of plans) {
-      printPlan(p, lockTracked);
+      printPlan(p, modifyLock);
       console.log('');
-    }
-
-    if (lockTracked && plans.some((p) => p.target.inLock)) {
-      console.error(
-        red('Skipping skills-lock.json (tracked by git; pass --force-lock to override)'),
-      );
     }
 
     if (dryRun) return;
 
     if (!yes) {
-      const ok = await confirm('Proceed?');
+      const promptText = all ? `Remove ALL ${plans.length} skills?` : 'Proceed?';
+      const ok = await confirm(promptText);
       if (!ok) {
         console.log('Aborted');
         process.exit(1);
@@ -132,11 +146,11 @@ export const removeCommand = defineCommand({
 
     for (const { target } of plans) {
       if (target.inLock) {
-        if (lockTracked) {
-          console.log(`Skipped skills-lock.json (git-tracked) for ${q(target.name)}`);
-        } else {
+        if (modifyLock) {
           const r = removeSkillFromLock(lockPath, target.name);
           if (r.removed) console.log(`Removed ${q(target.name)} from skills-lock.json`);
+        } else {
+          console.log(`Kept ${q(target.name)} in skills-lock.json (no --force-lock)`);
         }
       } else {
         console.log(`Skipped skills-lock.json (not in lock)`);
