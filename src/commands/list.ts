@@ -39,6 +39,7 @@ function paintDisk(n: NameWithInstall): string {
 function bySource(
   records: SkillRecord[],
   roots: { claude: string; agents: string },
+  lockLabel: string,
 ): { agents: SourceRow; claude: SourceRow; lock: SourceRow } {
   const claudeRecords = records.filter((r) => r.sources.includes('.claude'));
   const agentsRecords = records.filter((r) => r.sources.includes('.agents'));
@@ -57,7 +58,7 @@ function bySource(
   return {
     agents: { label: '.agents/skills', names: agentsNames, totalCount: agentsNames.length },
     claude: { label: '.claude/skills', names: claudeNames, totalCount: claudeNames.length },
-    lock: { label: 'skills-lock.json', names: lockNames, totalCount: lockNames.length },
+    lock: { label: lockLabel, names: lockNames, totalCount: lockNames.length },
   };
 }
 
@@ -75,7 +76,10 @@ export const listCommand = defineCommand({
       claude: rootFor(args.global, lockPath, '.claude'),
       agents: rootFor(args.global, lockPath, '.agents'),
     };
-    const rows = bySource(records, roots);
+    const lockLabel = args.global ? '.agents/.skill-lock.json' : 'skills-lock.json';
+    const rows = bySource(records, roots, lockLabel);
+
+    console.log(args.global ? 'Global' : 'Local');
 
     const claudeSet = new Set(rows.claude.names.map((n) => n.name));
     const agentsSet = new Set(rows.agents.names.map((n) => n.name));
@@ -92,10 +96,11 @@ export const listCommand = defineCommand({
       },
       {
         row: rows.lock,
-        render: () =>
-          orphans.length === 0
-            ? green('All skills onboard!')
-            : orphans.map((n) => red(n.name)).join(' '),
+        render: () => {
+          if (rows.lock.totalCount === 0) return '';
+          if (orphans.length === 0) return green('All skills onboard!');
+          return orphans.map((n) => red(n.name)).join(' ');
+        },
       },
     ];
 

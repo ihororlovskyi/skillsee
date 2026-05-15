@@ -1,4 +1,6 @@
 import { spawnSync } from 'node:child_process';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { run } from './helpers';
@@ -81,5 +83,57 @@ describe('skl ls', () => {
     const claudeIdx = plain.indexOf('.claude/skills');
     expect(agentsIdx).toBeGreaterThanOrEqual(0);
     expect(claudeIdx).toBeGreaterThan(agentsIdx);
+  });
+
+  it('prints "Local" header as first line by default', () => {
+    const fix = resolve(__dirname, '..', 'fixtures', 'list', 'empty-local');
+    const r = run(['ls'], fix);
+    expect(r.exitCode).toBe(0);
+    const lines = r.stdout.split('\n');
+    expect(lines[0]).toBe('Local');
+  });
+
+  it('prints "Global" header when -g is passed', () => {
+    const fix = resolve(__dirname, '..', 'fixtures', 'list', 'empty-local');
+    const home = mkdtempSync(join(tmpdir(), 'skl-ls-global-'));
+    try {
+      const r = spawnSync(process.execPath, [CLI, 'ls', '-g'], {
+        encoding: 'utf8',
+        cwd: fix,
+        env: { ...process.env, HOME: home, SKILLIO_NO_UPDATE_CHECK: '1' },
+      });
+      expect(r.status).toBe(0);
+      const lines = (r.stdout ?? '').split('\n');
+      expect(lines[0]).toBe('Global');
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  it('global scope shows real lock filename .agents/.skill-lock.json (not skills-lock.json)', () => {
+    const fix = resolve(__dirname, '..', 'fixtures', 'list', 'empty-local');
+    const home = mkdtempSync(join(tmpdir(), 'skl-ls-global-label-'));
+    try {
+      const r = spawnSync(process.execPath, [CLI, 'ls', '-g'], {
+        encoding: 'utf8',
+        cwd: fix,
+        env: { ...process.env, HOME: home, SKILLIO_NO_UPDATE_CHECK: '1' },
+      });
+      expect(r.status).toBe(0);
+      expect(r.stdout).toMatch(/\.agents\/\.skill-lock\.json\s*:/);
+      // local label MUST NOT appear in global output
+      expect(r.stdout).not.toMatch(/^skills-lock\.json\s*:/m);
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  it('does not show "All skills onboard!" when lock has 0 entries', () => {
+    const fix = resolve(__dirname, '..', 'fixtures', 'list', 'empty-local');
+    const r = run(['ls'], fix);
+    expect(r.exitCode).toBe(0);
+    expect(r.stdout).not.toContain('All skills onboard!');
+    // count cell still shows 0 skills
+    expect(r.stdout).toMatch(/skills-lock\.json\s+:\s+0 skills\s*$/m);
   });
 });
