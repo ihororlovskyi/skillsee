@@ -73,6 +73,8 @@ export const costCommand = defineCommand({
       console.log(`${cyan(r.name)}${namePad}  ${tokenCell}${tokenPad}${suffix}`);
     }
     console.log('');
-    console.log(`Total: ~${total} tok across ${rows.length} skills    ${paint(message)}`);
+    console.log(
+      `Total: ~${total} tok across ${rows.length} skills    ${paint(message)}  ·  method: chars/4, yaml-frontmatter`,
+    );
   },
 });

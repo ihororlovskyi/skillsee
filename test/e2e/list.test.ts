@@ -136,4 +136,22 @@ describe('skl ls', () => {
     // count cell still shows 0 skills
     expect(r.stdout).toMatch(/skills-lock\.json\s+:\s+0 skills\s*$/m);
   });
+
+  it('--names prints one name per line, sorted, no header, no colors', () => {
+    const r = runWithColor(['ls', '--names'], LOCK_DIR);
+    expect(r.status).toBe(0);
+    const lines = r.stdout.split('\n').filter((l) => l.length > 0);
+    expect(lines).toEqual(['skill-bar', 'skill-baz', 'skill-foo']);
+    // no ANSI sequences
+    expect(r.stdout).not.toMatch(/\x1b\[/);
+    // no Local/Global header
+    expect(r.stdout).not.toMatch(/^(Local|Global)$/m);
+  });
+
+  it('--names emits nothing when scope is empty', () => {
+    const fix = resolve(__dirname, '..', 'fixtures', 'list', 'empty-local');
+    const r = run(['ls', '--names'], fix);
+    expect(r.exitCode).toBe(0);
+    expect(r.stdout).toBe('');
+  });
 });

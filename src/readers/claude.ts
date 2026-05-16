@@ -33,6 +33,7 @@ export function readClaudeUsage(options: ClaudeReaderOptions): UsageResult {
     let prevSkill: string | null = null;
     const sessionAttr = new Map<string, number>();
     const sessionAct = new Map<string, number>();
+    const sessionMen = new Map<string, number>();
     for (const line of readFileSync(file, 'utf8').split('\n')) {
       if (!line.trim()) continue;
       linesRead++;
@@ -61,7 +62,7 @@ export function readClaudeUsage(options: ClaudeReaderOptions): UsageResult {
       }
       if (options.mode === 'mentions') {
         for (const skill of extractClaudeMentions(entry)) {
-          counts.set(skill, (counts.get(skill) ?? 0) + 1);
+          sessionMen.set(skill, (sessionMen.get(skill) ?? 0) + 1);
         }
       }
     }
@@ -69,6 +70,8 @@ export function readClaudeUsage(options: ClaudeReaderOptions): UsageResult {
       for (const [k, v] of sessionAttr) counts.set(k, (counts.get(k) ?? 0) + v);
     } else if (options.mode === 'activations') {
       for (const [k, v] of sessionAct) counts.set(k, (counts.get(k) ?? 0) + v);
+    } else if (options.mode === 'mentions') {
+      for (const [k, v] of sessionMen) counts.set(k, (counts.get(k) ?? 0) + v);
     } else if (options.mode === 'merged') {
       const keys = new Set<string>([...sessionAttr.keys(), ...sessionAct.keys()]);
       for (const k of keys) {

@@ -7,9 +7,15 @@ describe('extractClaudeMentions', () => {
     expect(extractClaudeMentions(entry)).toContain('skill-foo');
   });
 
-  it('finds superpowers: tokens', () => {
+  it('finds superpowers: tokens normalized to bare names', () => {
     const entry = { content: 'superpowers:skill-bar is active' };
-    expect(extractClaudeMentions(entry)).toContain('superpowers:skill-bar');
+    expect(extractClaudeMentions(entry)).toContain('skill-bar');
+    expect(extractClaudeMentions(entry)).not.toContain('superpowers:skill-bar');
+  });
+
+  it('coalesces bare and prefixed mentions of the same skill (no double-count)', () => {
+    const entry = { a: 'skill-foo/SKILL.md', b: 'superpowers:skill-foo loaded' };
+    expect(extractClaudeMentions(entry)).toEqual(['skill-foo']);
   });
 
   it('deduplicates within an entry', () => {

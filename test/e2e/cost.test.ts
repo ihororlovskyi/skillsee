@@ -54,4 +54,10 @@ describe('skl cost', () => {
     expect(exitCode).toBe(0);
     expect(stdout).toMatch(/Total: ~\d+ tok across 3 skills/);
   });
+
+  it('summary includes method label', () => {
+    const { stdout, exitCode } = run(['cost'], COST_DIR);
+    expect(exitCode).toBe(0);
+    expect(stdout).toContain('·  method: chars/4, yaml-frontmatter');
+  });
 });

@@ -66,6 +66,11 @@ export const listCommand = defineCommand({
   meta: { description: 'List skills per source with install-type coloring and lock orphan filter' },
   args: {
     global: { type: 'boolean', alias: 'g', default: false, description: 'Use global scope' },
+    names: {
+      type: 'boolean',
+      default: false,
+      description: 'Print one skill name per line (no header, no colors) — for completion scripts',
+    },
   },
   run({ args }) {
     const lockPath = getLockPath(args.global);
@@ -78,6 +83,15 @@ export const listCommand = defineCommand({
     };
     const lockLabel = args.global ? '.agents/.skill-lock.json' : 'skills-lock.json';
     const rows = bySource(records, roots, lockLabel);
+
+    if (args.names) {
+      const all = new Set<string>();
+      for (const n of rows.agents.names) all.add(n.name);
+      for (const n of rows.claude.names) all.add(n.name);
+      for (const n of rows.lock.names) all.add(n.name);
+      for (const name of [...all].sort()) console.log(name);
+      return;
+    }
 
     console.log(args.global ? 'Global' : 'Local');
 

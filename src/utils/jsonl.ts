@@ -26,12 +26,12 @@ export function readJsonlLines(file: string): unknown[] {
 }
 
 export function isRecentEntry(entry: unknown, since: Date): boolean {
-  if (typeof entry !== 'object' || entry === null) return true;
+  if (typeof entry !== 'object' || entry === null) return false;
   const e = entry as Record<string, unknown>;
   if (typeof e.timestamp === 'string') {
     const d = new Date(e.timestamp);
     return Number.isNaN(d.getTime()) || d >= since;
   }
   if (typeof e.ts === 'number') return new Date(e.ts * 1000) >= since;
-  return true;
+  return false;
 }

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { createRequire } from 'node:module';
 import { defineCommand, runMain } from 'citty';
+import { completionCommand } from './commands/completion';
 import { costCommand } from './commands/cost';
 import { listCommand } from './commands/list';
 import { removeCommand } from './commands/remove';
@@ -51,6 +52,7 @@ const SUBCOMMAND_NAMES = new Set([
   'usage',
   'us',
   'usg',
+  'completion',
 ]);
 
 function reorderRootFlagsToSubcommand(argv: string[]): string[] {
@@ -77,15 +79,16 @@ function printRootHelp(): void {
     '  -h, --help       Show this help and exit',
     '  -v, --version    Show version and exit',
     '  -g, --global     Use global scope (default: false)',
-    '  -p, --period     Period for `usage`: 60s, 30m, 24h, 30d, 2w, all (default: all)',
+    '  -p, --period     Period for `usage`: 60s, 30m, 24h, 30d, 2w, 6mo, all (default: all)',
     '  -a, --agent      Agent for `usage`: claude-code, codex (default: both)',
     '',
     'COMMANDS',
     '',
-    '  list, ls         List skills per source with totals and lock-vs-disk diff',
-    '  remove, rm       Remove skills from lock and delete their on-disk dirs',
+    '  list, ls         List skills per source: install type, lock orphans, disk/lock diff',
+    '  remove, rm       Delete on-disk skill dirs; lock kept unless --force-lock',
     '  cost, co, cst    Show ambient ballast cost (per-skill frontmatter tokens) sorted desc',
     '  usage, us, usg   Show skill usage × cost (consumption) with missed rows',
+    '  completion       Print shell completion script (bash, zsh, fish)',
   ];
   console.log(lines.join('\n'));
 }
@@ -95,6 +98,44 @@ function isRootHelp(argv: string[]): boolean {
   const first = args[0];
   if (first && SUBCOMMAND_NAMES.has(first)) return false;
   return args.includes('--help') || args.includes('-h');
+}
+
+function isRemoveHelp(argv: string[]): boolean {
+  const args = argv.slice(2);
+  const first = args[0];
+  if (first !== 'remove' && first !== 'rm') return false;
+  return args.includes('--help') || args.includes('-h');
+}
+
+function printRemoveHelp(): void {
+  const lines = [
+    'Remove skills from on-disk dirs (lock preserved unless --force-lock).',
+    '',
+    'USAGE skillio remove [SKILL...] [OPTIONS]',
+    '       skillio rm [SKILL...] [OPTIONS]',
+    '',
+    'ARGUMENTS',
+    '',
+    '  SKILL...         One or more skill names. Use --all to target every skill in scope.',
+    '',
+    'OPTIONS',
+    '',
+    '  -g, --global     Use global scope (default: false)',
+    '      --all        Remove every skill in scope (mutually exclusive with SKILL)',
+    '      --dry-run    Print plan without deleting',
+    '  -y, --yes        Skip confirmation prompt (non-TTY only for --all)',
+    '      --force-lock Also remove entry from skills-lock.json (default: lock preserved)',
+    '      --lock-only  Remove only the lock entry; keep on-disk directories',
+    '',
+    'EXAMPLES',
+    '',
+    '  skillio rm brainstorming',
+    '  skillio rm brainstorming writing-plans --yes',
+    '  skillio rm --all --dry-run',
+    '  skillio rm --force-lock obsolete-skill',
+    '  skillio rm --lock-only stale-entry',
+  ];
+  console.log(lines.join('\n'));
 }
 
 function firstPositional(argv: string[]): string | null {
@@ -164,12 +205,17 @@ const main = defineCommand({
     usage: usageCommand,
     us: usageCommand,
     usg: usageCommand,
+    completion: completionCommand,
   },
 });
 
 (async () => {
   if (isRootHelp(process.argv)) {
     printRootHelp();
+    return;
+  }
+  if (isRemoveHelp(process.argv)) {
+    printRemoveHelp();
     return;
   }
   if (isRootVersion(process.argv)) {

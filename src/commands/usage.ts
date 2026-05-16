@@ -4,8 +4,8 @@ import { defineCommand } from 'citty';
 import { getLockPath } from '../lock/file';
 import { type ClaudeMode, readClaudeUsage } from '../readers/claude';
 import { type CodexMode, readCodexUsage } from '../readers/codex';
-import { cyan } from '../utils/ansi';
-import { discoverSkills, type SkillRecord } from '../utils/discover-skills';
+import { cyan, red } from '../utils/ansi';
+import { discoverSkills } from '../utils/discover-skills';
 import { expandHome } from '../utils/expand-home';
 import { parsePeriod } from '../utils/period';
 import { detectScope, encodeClaudeProjectDir } from '../utils/scope';
@@ -27,6 +27,7 @@ export interface UsageRowInput {
   count: number;
   name: string;
   countWidth: number;
+  installed?: boolean;
 }
 
 function pad(n: number | string, width: number): string {
@@ -34,7 +35,8 @@ function pad(n: number | string, width: number): string {
 }
 
 export function formatUsageRow(row: UsageRowInput): string {
-  return `${pad(row.count, row.countWidth)} ${cyan(row.name)}`;
+  const suffix = row.installed === false ? ` ${red('(missing)')}` : '';
+  return `${pad(row.count, row.countWidth)} ${cyan(row.name)}${suffix}`;
 }
 
 function parseAgents(agent: string | undefined): Agent[] {
@@ -63,7 +65,7 @@ export const usageArgs = {
     type: 'string',
     alias: 'p',
     default: 'all',
-    description: '60s, 30m, 24h, 30d, 2w, all',
+    description: '60s, 30m, 24h, 30d, 2w, 6mo, all',
   },
   since: { type: 'string', description: 'yyyy-mm-dd, overrides --period' },
   mode: {
@@ -119,7 +121,7 @@ export async function runUsage(args: UsageArgs): Promise<void> {
   interface AgentResult {
     agent: Agent;
     mode: string;
-    rows: Array<{ name: string; count: number; tokens?: number; status: SkillRecord['status'] }>;
+    rows: Array<{ name: string; count: number; tokens?: number; installed: boolean }>;
     stats: { filesRead: number; linesRead: number };
   }
 
@@ -156,15 +158,13 @@ export async function runUsage(args: UsageArgs): Promise<void> {
         name,
         count: counts.get(name) ?? 0,
         tokens: rec?.frontmatterTokens,
-        status: rec?.status ?? 'ok',
+        installed: rec !== undefined && rec.status !== 'missing',
       };
     });
     const rows = allRows.filter((r) => r.count > 0);
 
     rows.sort((a, b) => {
-      const aOk = a.status === 'ok';
-      const bOk = b.status === 'ok';
-      if (aOk !== bOk) return aOk ? -1 : 1;
+      if (a.installed !== b.installed) return a.installed ? -1 : 1;
       if (b.count !== a.count) return b.count - a.count;
       return a.name.localeCompare(b.name);
     });
@@ -182,6 +182,7 @@ export async function runUsage(args: UsageArgs): Promise<void> {
         count: r.count,
         tokensPerSkill: r.tokens ?? null,
         consumption: (r.tokens ?? 0) * r.count,
+        installed: r.installed,
       })),
     }));
     console.log(JSON.stringify(output.length === 1 ? output[0] : output, null, 2));
@@ -204,7 +205,9 @@ export async function runUsage(args: UsageArgs): Promise<void> {
     if (rows.length === 0) continue;
     const countWidth = Math.max(...rows.map((r) => String(r.count).length));
     for (const r of rows) {
-      console.log(formatUsageRow({ count: r.count, name: r.name, countWidth }));
+      console.log(
+        formatUsageRow({ count: r.count, name: r.name, countWidth, installed: r.installed }),
+      );
       distinct.add(r.name);
     }
     grandActivations += activations;

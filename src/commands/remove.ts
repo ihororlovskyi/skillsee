@@ -7,6 +7,7 @@ import { cyan } from '../utils/ansi';
 import { confirm } from '../utils/confirm';
 import { discoverSkills } from '../utils/discover-skills';
 import { rmSkillDir } from '../utils/fs-rm';
+import { promptText } from '../utils/prompt';
 
 interface SkillTarget {
   name: string;
@@ -55,14 +56,21 @@ function fileCount(dir: string): number {
   return n;
 }
 
-function printPlan(plan: DeletePlan, modifyLock: boolean): void {
+function printPlan(plan: DeletePlan, modifyLock: boolean, lockOnly: boolean): void {
   const { target } = plan;
   console.log(`Will remove ${q(target.name)}:`);
   if (target.inLock) {
-    if (modifyLock) console.log('  - skills-lock.json');
+    if (lockOnly || modifyLock) console.log('  - skills-lock.json');
     else console.log('  - skills-lock.json (kept; use --force-lock to remove lock entry)');
   } else {
     console.log('  - skills-lock.json (not in lock)');
+  }
+  if (lockOnly) {
+    if (target.claudeDir) console.log(`  - .claude/skills/${target.name}/  (kept; --lock-only)`);
+    else console.log('  - .claude/skills/  (not found)');
+    if (target.agentsDir) console.log(`  - .agents/skills/${target.name}/  (kept; --lock-only)`);
+    else console.log('  - .agents/skills/  (not found)');
+    return;
   }
   if (target.claudeDir)
     console.log(`  - .claude/skills/${target.name}/  (${plan.claudeFileCount} files)`);
@@ -86,9 +94,26 @@ export const removeCommand = defineCommand({
       default: false,
       description: 'Also remove entry from skills-lock.json (default is to keep lock untouched)',
     },
+    'lock-only': {
+      type: 'boolean',
+      default: false,
+      description: 'Remove only the skills-lock.json entry; keep on-disk directories',
+    },
   },
   async run({ args }) {
-    const { global: isGlobal, 'dry-run': dryRun, yes, all, 'force-lock': modifyLock } = args;
+    const {
+      global: isGlobal,
+      'dry-run': dryRun,
+      yes,
+      all,
+      'force-lock': modifyLock,
+      'lock-only': lockOnly,
+    } = args;
+
+    if (lockOnly && modifyLock) {
+      console.error('--lock-only is mutually exclusive with --force-lock');
+      process.exit(1);
+    }
 
     const subcmdIdx = process.argv.findIndex((a) => a === 'remove' || a === 'rm');
     const names = process.argv.slice(subcmdIdx + 1).filter((a) => !a.startsWith('-'));
@@ -127,15 +152,32 @@ export const removeCommand = defineCommand({
     }));
 
     for (const p of plans) {
-      printPlan(p, modifyLock);
+      printPlan(p, modifyLock, lockOnly);
       console.log('');
     }
 
     if (dryRun) return;
 
-    if (!yes) {
-      const promptText = all ? `Remove ALL ${plans.length} skills?` : 'Proceed?';
-      const ok = await confirm(promptText);
+    if (all) {
+      const subject = lockOnly
+        ? `ALL ${plans.length} lock entries (disk preserved)`
+        : `ALL ${plans.length} skills`;
+      const interactive = process.stdin.isTTY && process.stdout.isTTY;
+      if (interactive) {
+        const phrase = await promptText(`This will remove ${subject}. Type "all" to confirm:`);
+        if (phrase !== 'all') {
+          console.log('Aborted');
+          process.exit(1);
+        }
+      } else if (!yes) {
+        const ok = await confirm(`Remove ${subject}?`);
+        if (!ok) {
+          console.log('Aborted');
+          process.exit(1);
+        }
+      }
+    } else if (!yes) {
+      const ok = await confirm('Proceed?');
       if (!ok) {
         console.log('Aborted');
         process.exit(1);
@@ -146,7 +188,7 @@ export const removeCommand = defineCommand({
 
     for (const { target } of plans) {
       if (target.inLock) {
-        if (modifyLock) {
+        if (lockOnly || modifyLock) {
           const r = removeSkillFromLock(lockPath, target.name);
           if (r.removed) console.log(`Removed ${q(target.name)} from skills-lock.json`);
         } else {
@@ -154,6 +196,13 @@ export const removeCommand = defineCommand({
         }
       } else {
         console.log(`Skipped skills-lock.json (not in lock)`);
+      }
+      if (lockOnly) {
+        if (target.claudeDir) console.log(`Kept .claude/skills/${target.name}/ (--lock-only)`);
+        else console.log('Skipped .claude/skills (not found)');
+        if (target.agentsDir) console.log(`Kept .agents/skills/${target.name}/ (--lock-only)`);
+        else console.log('Skipped .agents/skills (not found)');
+        continue;
       }
       if (target.claudeDir) {
         const r = rmSkillDir(target.claudeDir, { allowedRoots });

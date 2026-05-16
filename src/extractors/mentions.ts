@@ -10,7 +10,7 @@ export function extractClaudeMentions(entry: unknown): string[] {
       if (m[1] !== undefined) seen.add(m[1]);
     }
     for (const m of node.matchAll(/\bsuperpowers:([a-z0-9-]+)\b/g)) {
-      if (m[1] !== undefined) seen.add(`superpowers:${m[1]}`);
+      if (m[1] !== undefined) seen.add(m[1]);
     }
   });
   return [...seen];

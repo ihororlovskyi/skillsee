@@ -67,11 +67,11 @@ describe('isRecentEntry', () => {
     expect(isRecentEntry({ ts: 1000000 }, since)).toBe(false); // 1970
   });
 
-  it('returns true for entries without timestamp (unknown shape)', () => {
-    expect(isRecentEntry({ type: 'other' }, since)).toBe(true);
+  it('returns false for entries without timestamp/ts (no signal → not recent)', () => {
+    expect(isRecentEntry({ type: 'other' }, since)).toBe(false);
   });
 
-  it('returns true for null', () => {
-    expect(isRecentEntry(null, since)).toBe(true);
+  it('returns false for null (no signal)', () => {
+    expect(isRecentEntry(null, since)).toBe(false);
   });
 });

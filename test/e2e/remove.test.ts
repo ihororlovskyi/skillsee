@@ -112,6 +112,59 @@ describe('skl rm', () => {
     rmSync(tmpDir, { recursive: true, force: true });
   });
 
+  it('--lock-only removes lock entry but keeps disk dirs', () => {
+    const tmpDir = mkdtempSync(join(tmpdir(), 'skl-rm-'));
+    writeFileSync(
+      join(tmpDir, 'skills-lock.json'),
+      JSON.stringify({ skills: { foo: {}, bar: {} } }),
+    );
+    mkdirSync(join(tmpDir, '.claude', 'skills', 'foo'), { recursive: true });
+    writeFileSync(join(tmpDir, '.claude', 'skills', 'foo', 'SKILL.md'), 'x');
+
+    const r = spawnSync(process.execPath, [CLI, 'rm', 'foo', '--lock-only', '--yes'], {
+      cwd: tmpDir,
+      encoding: 'utf8',
+      env: { ...process.env, SKILLIO_NO_UPDATE_CHECK: '1' },
+    });
+    expect(r.status).toBe(0);
+
+    const lock = JSON.parse(readFileSync(join(tmpDir, 'skills-lock.json'), 'utf8'));
+    expect(lock.skills).not.toHaveProperty('foo');
+    expect(lock.skills).toHaveProperty('bar');
+    expect(existsSync(join(tmpDir, '.claude', 'skills', 'foo', 'SKILL.md'))).toBe(true);
+    expect(r.stdout).toContain('Kept .claude/skills/foo/');
+
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it('--lock-only with --force-lock is rejected', () => {
+    const r = spawnSync(
+      process.execPath,
+      [CLI, 'rm', 'skill-foo', '--lock-only', '--force-lock', '--yes'],
+      { cwd: TMP, encoding: 'utf8', env: { ...process.env, SKILLIO_NO_UPDATE_CHECK: '1' } },
+    );
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain('--lock-only is mutually exclusive with --force-lock');
+  });
+
+  it('removes .agents/skills/<name> dir on default rm', () => {
+    const tmpDir = mkdtempSync(join(tmpdir(), 'skl-rm-agents-'));
+    writeFileSync(join(tmpDir, 'skills-lock.json'), JSON.stringify({ skills: { foo: {} } }));
+    mkdirSync(join(tmpDir, '.agents', 'skills', 'foo'), { recursive: true });
+    writeFileSync(join(tmpDir, '.agents', 'skills', 'foo', 'SKILL.md'), 'x');
+
+    const r = spawnSync(process.execPath, [CLI, 'rm', 'foo', '--yes'], {
+      cwd: tmpDir,
+      encoding: 'utf8',
+      env: { ...process.env, SKILLIO_NO_UPDATE_CHECK: '1' },
+    });
+    expect(r.status).toBe(0);
+    expect(r.stdout).toMatch(/Removed "foo" from \.agents\/skills/);
+    expect(existsSync(join(tmpDir, '.agents', 'skills', 'foo'))).toBe(false);
+
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
+
   it('printPlan announces "kept" without --force-lock', () => {
     const tmpDir = mkdtempSync(join(tmpdir(), 'skl-rm-'));
     writeFileSync(join(tmpDir, 'skills-lock.json'), JSON.stringify({ skills: { foo: {} } }));

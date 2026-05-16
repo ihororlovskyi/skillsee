@@ -31,4 +31,36 @@ describe('formatUsageRow', () => {
       }),
     ).toBe(' 0 skill-baz');
   });
+
+  it('appends "(missing)" suffix when installed=false', () => {
+    expect(
+      formatUsageRow({
+        count: 1,
+        name: 'supabase',
+        countWidth: 1,
+        installed: false,
+      }),
+    ).toBe('1 supabase (missing)');
+  });
+
+  it('no suffix when installed=true', () => {
+    expect(
+      formatUsageRow({
+        count: 1,
+        name: 'supabase',
+        countWidth: 1,
+        installed: true,
+      }),
+    ).toBe('1 supabase');
+  });
+
+  it('no suffix when installed is undefined (default)', () => {
+    expect(
+      formatUsageRow({
+        count: 1,
+        name: 'skill-foo',
+        countWidth: 1,
+      }),
+    ).toBe('1 skill-foo');
+  });
 });

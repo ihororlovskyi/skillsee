@@ -2,6 +2,11 @@
 
 [![npm version](https://img.shields.io/npm/v/skillio)](https://www.npmjs.com/package/skillio)
 [![CI](https://github.com/ihororlovskyi/skillio/actions/workflows/ci.yml/badge.svg)](https://github.com/ihororlovskyi/skillio/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/ihororlovskyi/skillio/actions/workflows/codeql.yml/badge.svg)](https://github.com/ihororlovskyi/skillio/actions/workflows/codeql.yml)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/ihororlovskyi/skillio/badge)](https://securityscorecards.dev/viewer/?uri=github.com/ihororlovskyi/skillio)
+[![codecov](https://codecov.io/gh/ihororlovskyi/skillio/branch/main/graph/badge.svg)](https://codecov.io/gh/ihororlovskyi/skillio)
+[![license](https://img.shields.io/npm/l/skillio)](https://github.com/ihororlovskyi/skillio/blob/main/LICENSE)
+[![node](https://img.shields.io/node/v/skillio)](https://www.npmjs.com/package/skillio)
 
 Audit and manage AI agent skills for Claude Code and OpenAI Codex.
 
@@ -76,10 +81,12 @@ skl cost                               # ambient ballast cost (frontmatter token
 skl cst                                # alias for cost
 skl usage                              # consumption: usage count × frontmatter tokens
 skl usg                                # alias for usage
-skl rm brainstorming                   # remove from lock + delete on-disk dir (with Y/n prompt)
+skl rm brainstorming                   # delete on-disk dir; lock kept (Y/n prompt)
 skl rm brainstorming writing-plans     # remove multiple
+skl rm --all                           # remove all skills in scope
 skl rm --yes brainstorming             # skip confirmation
 skl rm --dry-run brainstorming         # preview only
+skl rm --force-lock brainstorming      # also remove the lock entry
 
 # scope flags
 skl -g                                 # force global scope on any subcommand
@@ -114,7 +121,7 @@ skl usage -a claude -a codex           # equivalent: repeated --agent flag
 | `-h, --help` | — | Show help and exit |
 | `-v, --version` | — | Show version and exit |
 | `-g, --global` | `false` | Use global scope (ignore current directory) |
-| `-p, --period` | `all` | Period for `usage`: `30sec`, `5min`, `12h`, `7d`, `2w`, `1m`, `1y`, `all` |
+| `-p, --period` | `all` | Period for `usage`: `60s`, `30m`, `12h`, `7d`, `2w`, `6mo`, `all` (note: `1m` = 1 minute, `1mo` = 30 days) |
 | `-a, --agent` | both | Agent for `usage`: `claude-code` (alias `claude`), `codex` — pass both space-separated (`-a claude-code codex`) or repeat the flag |
 
 ### `skillio usage` / `us`
@@ -129,9 +136,9 @@ skillio usage --agent codex --mode activations
 | Flag | Default | Description |
 |------|---------|-------------|
 | `-a, --agent` | both | `claude-code`/`claude`, `codex` |
-| `-p, --period` | `all` | `7d`, `2w`, `1m`, `1y`, `all` |
+| `-p, --period` | `all` | `60s`, `30m`, `24h`, `7d`, `2w`, `6mo`, `all` |
 | `--since` | — | `yyyy-mm-dd`, overrides `--period` |
-| `--mode` | `attributed` (claude) / `activations` (codex) | `attributed` \| `activations` \| `mentions` |
+| `--mode` | `merged` (claude) / `activations` (codex) | `merged` \| `attributed` \| `activations` \| `mentions` |
 | `--format` | `text` | `text` \| `json` |
 | `-g, --global` | `false` | Force global scope (ignore current directory) |
 | `--root` | — | Override agent sessions directory; implies global |
@@ -139,9 +146,10 @@ skillio usage --agent codex --mode activations
 
 ### Modes
 
-- **`attributed`** — entries with an `attributionSkill` field set by Claude Code. This is the default and most reliable Claude mode.
-- **`activations`** — explicit `Skill` tool invocations found anywhere in the entry tree (Claude) or `exec_command_end` events / `<skill>` XML (Codex). This is the default and most reliable Codex mode.
-- **`mentions`** — skill paths (`foo/SKILL.md`) or `superpowers:name` strings found in any string value. This is a broad search mode and can include examples from prompts, specs, or documentation.
+- **`merged`** — per-session union of `attributed` and `activations` (`max` per skill). Default for Claude.
+- **`attributed`** — entries with an `attributionSkill` field set by Claude Code.
+- **`activations`** — explicit `Skill` tool invocations (Claude) or read-like `exec_command_end` events / `<skill>` XML (Codex). Default for Codex.
+- **`mentions`** — skill paths (`foo/SKILL.md`) or `superpowers:name` strings found anywhere. Broadest signal; can include matches from prompts, specs, or documentation.
 
 ### `skillio list` / `ls`
 
@@ -160,12 +168,35 @@ skillio cost --global   # same, against ~/.agents/.skill-lock.json
 ### `skillio remove` / `rm`
 
 ```sh
-skillio remove <skill-name>
+skillio remove <skill-name>               # delete on-disk dir; lock kept
 skillio remove <skill-one> <skill-two>
+skillio remove --all                      # remove all skills in scope
+skillio remove --force-lock <skill-name>  # also remove the lock entry
+skillio remove --lock-only <skill-name>   # only the lock entry; keep on disk
 skillio remove --global <skill-name>
-skillio remove --dry-run <skill-name>
-skillio remove --yes <skill-name>      # skip confirmation prompt
+skillio remove --dry-run <skill-name>     # preview only
+skillio remove --yes <skill-name>         # skip confirmation prompt
 ```
+
+### Shell completion
+
+`skl completion <shell>` prints a completion script. Sourced once in your
+rc-file, it tab-completes subcommands and dynamic skill names for `skl rm`.
+
+```sh
+# bash (one-time setup)
+skl completion bash >> ~/.bashrc
+
+# zsh
+skl completion zsh >> ~/.zshrc
+
+# fish
+skl completion fish | source            # one-off in current shell
+skl completion fish > ~/.config/fish/completions/skl.fish
+```
+
+`skl list --names` prints one skill name per line (no headers, no colors) and
+is what the completion script calls under the hood.
 
 ## Requirements
 

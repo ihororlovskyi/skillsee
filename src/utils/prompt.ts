@@ -86,6 +86,21 @@ export async function select(params: SelectParams): Promise<string | null> {
   });
 }
 
+export async function promptText(
+  question: string,
+  params?: { input?: NodeJS.ReadStream; output?: NodeJS.WriteStream },
+): Promise<string> {
+  const input = params?.input ?? process.stdin;
+  const output = params?.output ?? process.stdout;
+  const { createInterface } = await import('node:readline/promises');
+  const rl = createInterface({ input, output });
+  try {
+    return (await rl.question(`${question} `)).trim();
+  } finally {
+    rl.close();
+  }
+}
+
 export async function multiSelect(params: SelectParams): Promise<string[] | null> {
   const input = params.input ?? process.stdin;
   const output = params.output ?? process.stdout;

@@ -1,5 +1,71 @@
 # Changelog
 
+## 0.1.13 (2026-05-16)
+
+### Added
+
+- **`skl completion <bash|zsh|fish>`.** Prints a shell completion script that
+  tab-completes subcommands, flags and (dynamically) skill names for `skl rm`.
+  Source once in your rc-file; the script calls `skl list --names` under the
+  hood, so completions track real on-disk state.
+- **`skl list --names`.** Machine-readable mode that prints one unique skill
+  name per line, union of `.agents/skills`, `.claude/skills` and the lock
+  file, sorted, with no header and no colors. Designed for completion scripts
+  and pipelines.
+- **`skl rm --lock-only`.** Removes only the `skills-lock.json` entry and
+  keeps on-disk directories intact. Mutually exclusive with `--force-lock`.
+- **`skl usage`: `(missing)` suffix and `installed: boolean`.** Skills that
+  have usage records but are no longer present in lock or on disk are tagged
+  with a red `(missing)` suffix in text output; JSON output gains an
+  `installed` field. Sort is `installed-first`.
+- **`mo` period unit (30 days).** Use `6mo` to mean "the last 6 calendar
+  months" (180 days). `m` continues to mean minute — the new `mo` unit
+  removes the ambiguity around month-vs-minute in `-p`.
+- **`rm --all` typed-phrase guard in TTY.** Interactive `rm --all` now
+  requires typing the word `all` to confirm, even with `--yes`. Non-TTY
+  scripts that pass `--yes` are unchanged.
+- **Method label in `cost` summary.** The total line now ends with
+  `· method: chars/4, yaml-frontmatter` so the estimation method is
+  self-documenting.
+- **CodeQL workflow** (`.github/workflows/codeql.yml`) and
+  **OpenSSF Scorecard workflow** (`.github/workflows/scorecard.yml`).
+- **Vitest coverage + Codecov upload.** New `npm run test:coverage` script
+  and a `coverage` job in CI that uploads `lcov.info` to Codecov.
+
+### Changed
+
+- **`mentions` extractor normalizes plugin namespaces.** `superpowers:foo` is
+  now reported as bare `foo`, matching the names emitted by `attributed` and
+  `activations`. This removes a real double-count risk in `merged` mode when
+  the same skill appeared with and without a namespace prefix.
+- **`readers/claude.ts` mentions aggregation.** Switched from per-line
+  accumulation to a session-level `Map` (`sessionMen`) plus post-file
+  aggregation, matching the structure used by `attributed`/`activations`.
+  Output counts are unchanged; the refactor removes a structural
+  inconsistency flagged in code review.
+- **`isRecentEntry` (jsonl.ts).** Entries with no timestamp (or `null`) now
+  return `false` instead of `true`, removing inflation of short windows
+  caused by stamp-less log lines.
+- **Custom `skl remove --help`.** The remove subcommand now prints a
+  formatted USAGE/ARGUMENTS/OPTIONS/EXAMPLES block instead of the generic
+  citty layout.
+- **Root help descriptions** updated to reflect 0.1.11+ semantics for `list`
+  and `remove`.
+- **README rewrite.** Period units (`60s/30m/24h/30d/2w/6mo/all`), `rm`
+  semantics (disk-only by default, `--force-lock`, `--lock-only`, `--all`),
+  default modes per agent (Claude → `merged`, Codex → `activations`).
+- **README badges.** Added CodeQL, OpenSSF Scorecard, Codecov, license, and
+  node-version shields alongside the existing npm and CI badges.
+
+### Internal
+
+- `@vitest/coverage-v8` added as a devDependency (no new runtime deps).
+
+## 0.1.12 (2026-05-15)
+
+Version bump only — the substantive changes drafted for this slot landed in
+0.1.13. 0.1.12 on npm is identical to 0.1.11 except for the version field.
+
 ## 0.1.11 (2026-05-14)
 
 ### Breaking

@@ -14,6 +14,9 @@ describe('parsePeriod', () => {
   it('parses hours', () => expect(parsePeriod('24h')).toBe(24 * HOUR));
   it('parses days', () => expect(parsePeriod('30d')).toBe(30 * DAY));
   it('parses weeks', () => expect(parsePeriod('2w')).toBe(14 * DAY));
+  it('parses months (mo = 30 days)', () => expect(parsePeriod('1mo')).toBe(30 * DAY));
+  it('6mo equals 180 days', () => expect(parsePeriod('6mo')).toBe(180 * DAY));
+  it('1m is still 1 minute, not 1 month', () => expect(parsePeriod('1m')).toBe(MIN));
   it('parses "all" as infinity', () => expect(parsePeriod('all')).toBe(Number.POSITIVE_INFINITY));
   it('throws on invalid format', () => expect(() => parsePeriod('foo')).toThrow('Invalid period'));
   it('throws on unknown unit', () => expect(() => parsePeriod('5x')).toThrow('Invalid period'));
@@ -23,6 +26,7 @@ describe('parsePeriod', () => {
     expect(() => parsePeriod('5min')).toThrow('Invalid period'));
   it('throws on 1y (removed unit)', () =>
     expect(() => parsePeriod('1y')).toThrow('Invalid period'));
+  it('error message hints at mo', () => expect(() => parsePeriod('1y')).toThrow(/6mo/));
 });
 
 describe('periodToDate', () => {
