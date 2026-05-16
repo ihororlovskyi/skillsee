@@ -46,7 +46,7 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Run unit tests with coverage
-        run: bun run node_modules/.bin/vitest run --coverage
+        run: node node_modules/.bin/vitest run --coverage
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
